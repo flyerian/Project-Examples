@@ -1,0 +1,173 @@
+---
+title: "Project 1"
+author: 
+date: "2025-01-14"
+output:
+  html_document:
+  word_document:
+  pdf_document:
+  
+    fig_caption: true
+---
+
+ **Due**: 2/4/2025 @ 11:59 pm in iCollege. Please show your work, simplify fully, and give clear, careful justifications for your answers (using *words and sentences* to explain your logic, in addition to the relevant mathematical expressions and/or code). When code is used, both the *outputs* (such as plots and summary statistics) and the *code* must be included in your submission.
+
+
+* Make sure putting the data set in the same folder as the .rmd file
+
+* type your explanation before your R codes and/or after your R codes 
+
+\bigskip
+### (i)  Read the file Advertising.csv into R. 
+
+
+```{r}
+#Importing the raw data
+rawdata <- read.csv("Advertising.csv")
+```
+
+Conclusion: After completing the analysis of the two models, we found them to be very similar, with no significant outliers when compared visually. The second model had a Residual Sum of Squares (RSS) that was only 8.1 less than the first model. Overall, both models showed statistically similar performance, with comparable R² values and other error measurements. Despite the increased complexity of the second model, it did not significantly improve predictive ability with the addition of the extra variable, as evidenced by an F-test p-value of 0.38, which is well above the typical acceptance threshold.
+
+### (ii) Check and remove NAs. 
+
+
+```{r}
+#Confirmed if there was missing data. Used na.omit to ensure all data would be clean as back-up 
+table(is.na(rawdata))
+data = na.omit(rawdata)
+table(is.na(data))
+```
+
+
+### (iii) Explore data. 
+
+
+```{r}
+#Identified key pieces of information on the data set
+#Reviewed general statistics of the columns
+summary(data)
+#Viewed the data entries
+View(data)
+#Viewed the first and last sections of the data
+head(data,7)
+tail(data)
+#Confirmed dimensions for future needs
+dim(data)
+#Identified number of rows
+nrow(data)
+#Identified number of columns
+ncol(data)
+#Listed the column names
+names(data)
+#Confirmed the data types used in each column
+str(data)
+#Looked for correlation between each column variable
+cor(data)
+
+boxplot(data$TV, data$radio, data$newspaper,
+        main="Boxplot of Advertising Budgets",
+        names=c("TV", "radio", "newspaper"),
+        col=c("red", "yellow", "green"),
+        ylab="Budget (Thousdans of Dollars)")
+
+```
+
+### (iv) Divide data into training and testing sets. 
+
+
+
+```{r}
+#Separated data into 80% training and 20% testing data sets
+#confirmed total number of data points totals 200, per the original data set total
+set.seed(101)
+index <- sample(1:nrow(data), size = 0.8*nrow(data))
+training_data <- data[index, ]
+test_data <- data[-index, ]
+nrow(training_data)
+nrow(test_data)
+```
+
+\medskip
+### (v) Using training data, regress the response sales over predictor TV, plot data with the fitted regression line, plot predicted responses against responses by using testing data, and calculate RMSE. 
+
+
+```{r}
+#Created a linear model and reviewed the results for significance and the calculated values of the estimated parameters. We used the abline function to add the regression line to the first plot since it is a linear (straight) function.
+model_1 <- lm(sales ~ TV, data=training_data)
+summary(model_1)
+plot(training_data$TV, training_data$sales,
+     main="Predicted Model vs Training Responses",
+     xlab="TV Budget",
+     ylab= "Total Sales",
+     pch = 21, col="red")
+abline(model_1, col="blue", lwd = 2)
+#Used predict to create data points from the model and compared them visually to the test data
+prediction1 <- predict(model_1, newdata = test_data)
+plot(test_data$TV, test_data$sales,
+     main="Predicted Responses vs Test Reponses",
+     xlab="TV Budget",
+     ylab= "Total Sales",
+     pch = 21, col="red")
+points(test_data$TV,prediction1,pch=21, col="blue")
+#Calculated the rsme between the predicted values and the test data utilizing the data in the 2nd plot since it already had all required points 
+residual <- test_data$sales - prediction1
+rmse <- sqrt(mean(residual^2))
+print(rmse)
+```
+
+
+\medskip
+### (vi) Using training data, regress the response sales over predictors TV and the square of TV, plot data with the fitted regression line, plot predicted responses against responses by using testing data, and calculate RMSE. 
+
+
+```{r}
+#Created a second model and applied "I" in the model since it utilized a quadratic component to better estimate the sales.  Used summary to review the results from the regression for additional analysis. 
+#Utilized "seq" and "lines" to create the regression line in the first plot since abline would not work with the function since the fitted regression line was not straight
+model_2 <- lm(sales ~ TV + I(TV^2), data=training_data)
+summary(model_2)
+plot(training_data$TV, training_data$sales,
+     col="red", pch= 21,
+     main="Predicted Model vs Training Responses",
+     xlab="TV Budget",
+     ylab= "Total Sales")
+TV_seq <- seq(min(training_data$TV),max(training_data$TV),length.out = 200)
+training_pred <- predict(model_2, newdata = data.frame(TV = TV_seq))
+lines(TV_seq, training_pred, col="blue")
+#Used predict to create data points from the model and compared them visually to the test data
+prediction2 <- predict(model_2, newdata=test_data)
+plot(test_data$TV, test_data$sales,
+     col="red", pch = 21,
+     main="Predicted Responses vs Test Reponses",
+     xlab="TV Budget",
+     ylab="Total Sales")
+points(test_data$TV, prediction2, pch = 21, col = "blue")
+#Calculated the rsme between the predicted values and the test data utilizing the data in the 2nd plot since it already had all required points 
+residual2 <- test_data$sales - prediction2
+rsme <- sqrt(mean(residual2^2))
+rsme
+```
+
+
+### (vii) Check if these two models are significantly different.
+
+```{r}
+#Visually compared the points through a plot as it is helpful when first comparing information
+plot(test_data$TV, prediction1,
+     xlab="TVs Sold",
+     ylab= "Total Sales",
+     main="",
+     pch = 21, col="red")
+points(test_data$TV, prediction2, pch= 21, col="blue")
+legend("topright",                         # Position of the legend
+       legend = c("Prediction 1", "Prediction 2"),  
+       col = c("red", "blue"),             
+       pch = 21,                            
+       cex = 1,                             
+       bg = "white")
+residual3 <- prediction1 - prediction2
+#Used anova to identify if the addition of the 2nd variable in the second model was significant.It was calculated to not be significant in this instance. 
+anova(model_1, model_2)
+```
+
+
+

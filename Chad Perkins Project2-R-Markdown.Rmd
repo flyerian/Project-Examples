@@ -1,0 +1,182 @@
+---
+title: "Project 2"
+author: "Chad Perkins"
+#date: "2025-01-14"
+output:
+  
+  word_document:
+  html_document:
+  pdf_document:
+    fig_caption: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+
+
+ **Due**: 3/4/2025 @ 11:59 pm in iCollege. 
+ 
+ Please show your work, simplify fully, and give clear, careful justifications for your answers (using *words and sentences* to explain your logic, in addition to the relevant mathematical expressions and/or code). When code is used, both the *outputs* (such as plots and summary statistics) and the *code* must be included in your submission.
+
+
+* Make sure putting the data set in the same folder as the .rmd file
+
+* type your explanation before your R codes and/or after your R codes 
+
+\bigskip
+### (i)  Read the file Advertising.csv into R. 
+
+
+```{r}
+#Reading the data and setting it to "data" for future use in the project. Also reviewed the columns for future steps, removing the first column since it was not applicable in later processes.
+data <- read.csv("Advertising.csv")
+data <- data[,-1]
+names(data)
+View(data)
+```
+
+You can write your explanation/conclusions here:
+The analysis began by importing and cleaning the Advertising.csv dataset, removing any unnecessary columns for further processing. The data was then split into training (80%) and testing (20%) sets, allowing for model development and evaluation. Three linear regression models were created using one, two, and three predictors, labeled Best1, Best2, and Best3, respectively. When evaluating the models using adjusted R² and training data, Best2, which included TV and radio as predictors, emerged as the best model, achieving the highest adjusted R² value. The testing data was then used to calculate the Root Mean Squared Error (RMSE) for each of the three models. In this case, Best3, which included TV, radio, and newspaper as predictors, was the best performer, totaling the lowest RMSE, making it the final model (Best123) selected for further analysis.
+
+Residual analysis was then performed on both Best123 and Best0. The Residuals vs Fitted Plots for both models showed a lack of scatter, suggesting under-prediction in both cases, with the residuals either close to zero or negative. The Q-Q plots showed that the residuals closely followed a normal distribution, with minor deviations at the tails, which were not significant. In the Scale-Location Plots, both models exhibited some spread above the fitted line, indicating potential heteroscedasticity, though this issue was not severe. The Residuals vs Leverage Plots showed a more pronounced cone shape for Best123, indicating increasing variability in residuals as leverage increased, which could suggest heteroscedasticity. However, Best0 showed more stability, with residuals following Cook’s distance more closely. Additionally, Variance Inflation Factor (VIF) analysis was conducted on both models to check for multicollinearity. All variables in both Best123 and Best0 had VIF values well below 1.2, indicating that multicollinearity was not a significant issue for either model.
+
+In summary, Mode Best2 was identified as the best model based on adjusted R² (referenced as Best0), while Best3 outperformed the others in terms of RMSE (referenced as Best1230). Both models exhibited some evidence of heteroscedasticity and performed similarly for most of their residual behaviors, but neither model showed severe issues. Given the results, Best2 (Best0) would be the preferred model since it performed better during the residuals vs leverage analysis, had the better adjusted R^2, and performed almost identical to Best123 when comparing RMSE.
+
+### (ii) Divide data into training and testing sets.
+
+
+```{r}
+#Splitting the data into test and training sets, using 80% training and 20% testing from the original sample since 20% is sufficiently large enough to test, but allows for an ample size for training as well. Confirmed the split totals the original sample size. 
+set.seed(101)
+index <- sample(1:nrow(data), size = 0.8*nrow(data))
+training_data <- data[index, ]
+test_data <- data[-index, ]
+nrow(training_data)
+nrow(test_data)
+nrow(data)
+```
+
+
+### (iii) Using training data and response sales, find the best model with one predictor, two predictors, and three predictors and call them Best1, Best2, and Best3, respectively. From these three best models, find the best one by the adjusted R2 and call it Best0.
+
+
+```{r}
+#Developed three models using the variables(columns of data available). Set the adjusted R^2 as new reference variables for easier processing, and used them with if/else statements to ensure the Best0 model is chosen even if models are adjusted.I used direct references to the adjusted R2 value from the model summary to extract the value.
+#The Best model's information was then made the new reference for Best0, allowing for easier processing in later sections. The Best3 model, which included the additional variable 'newspaper,' provided a lower value than model Best2, indicating that the variable 'newspaper' was not significant enough to explain the variance in the data.
+Best1 <- lm(sales ~ TV, data = training_data)
+summary(Best1)
+Best2 <- lm(sales ~ TV + radio, data=training_data)
+summary(Best2)
+Best3<- lm(sales ~ TV + radio + newspaper, data = training_data)
+summary(Best3)
+adj_r2_Best1 <- summary(Best1)$adj.r.squared
+adj_r2_Best2 <- summary(Best2)$adj.r.squared
+adj_r2_Best3 <- summary(Best3)$adj.r.squared
+if (adj_r2_Best1 > adj_r2_Best2 & adj_r2_Best1 > adj_r2_Best3) {
+  Best0 <- Best1
+ } else if (adj_r2_Best2 > adj_r2_Best1 & adj_r2_Best2 > adj_r2_Best3) {
+    Best0 <- Best2
+ } else {
+    Best0 <- Best3
+ }
+
+cat("Best training model is:", deparse(Best0$call))
+r2_table <- data.frame(
+  Model = c("Best1", "Best2", "Best3"),
+  Adjusted_R2 = c(adj_r2_Best1, adj_r2_Best2, adj_r2_Best3)
+  )
+print(r2_table)
+```
+
+### (iv) Using testing data, find the best model from Best1, Best2, and Best3 in terms of RMSE, say Best123, and compare Best123 with Best0 in terms of RMSE.
+
+```{r}
+#Used the predict function to complete the models with test data. Made the RMSE's for each model new references, and used if/else statements to ensure the best model is chosen as Best123 based on the RMSE. The Best123 and the associated RMSE was made the new reference based on this consideration.
+#I then predicted results for Best0 based on testing data and calculated the RMSE of Best0 for direct comparison between the 2 winning models. They had similar RMSE's, as the difference was only 0.000443. 
+prediction1 <- predict(Best1, newdata = test_data)
+residual1 <- test_data$sales - prediction1
+rmse1 <- sqrt(mean(residual1^2))
+rmse1
+prediction2 <- predict(Best2, newdata = test_data)
+residual2 <- test_data$sales - prediction2
+rmse2 <- sqrt(mean(residual2^2))
+rmse2
+prediction3 <- predict(Best3, newdata = test_data)
+residual3 <- test_data$sales - prediction3
+rmse3 <- sqrt(mean(residual3^2))
+rmse3
+if (rmse1 < rmse2 & rmse1 < rmse3) {
+  Best123 <- Best1
+  rmse123 <- rmse1
+ } else if (rmse2 < rmse1 & rmse2 < rmse3) {
+    Best123 <- Best2
+    rmse123 <- rmse2
+ } else {
+    Best123 <- Best3
+    rmse123 <- rmse3
+ }
+
+cat("Best test model is:", deparse(Best123$call), "\n")
+rmse_table <- data.frame(
+  Models = c("Best1", "Best2", "Best3"),
+  RMSE = c(rmse1, rmse2, rmse3)
+)
+print(rmse_table)
+prediction4 <- predict(Best0, newdata = test_data)
+residual4 <- test_data$sales - prediction4
+rmse_Best0 <- sqrt(mean(residual4^2))
+cat("Best0 RMSE:", rmse_Best0, "\n")
+cat("Best123 RMSE:", rmse123, "\n")
+cat("Best123 RMSE is less than Best0 RMSE by:", format(rmse_Best0 - rmse123, nsmall=4))
+rmse_table2 <- data.frame(
+  Models = c("Best0", "Best123"),
+  RMSE = c(rmse_Best0, rmse123)
+)
+print(rmse_table2)
+```
+
+\medskip
+### (v) Using the whole dataset, conduct residual analysis and calculate VIF for Best123 and Best0.
+
+
+```{r}
+#I used the formulas from Best123 and Best0 to create a model and then plot the residual analysis with their residuals vs index plot as well.
+#I used car to complete VIF analysis of the variables.
+# The two models have similar residuals vs fitted plots with a lack of generally scattered results. This indicates they may be under-predicting since the points are either close to each other at the zero line or lower than the zero line. This suggests under prediction for both models at a similar scale.
+# The Q-Q Residuals are also very similar, with the points closely following the normal distribution with no major deviations or issues identified. The tails are a little lower than the normal curve, but not significantly lower or curving away, and can be considered reasonably normal.
+# The scale-Location plots are also very similar, with points generally scattered around the fitted smooth line. There does seem to be a greater spread above the fitted line, which could indicate potential scaling or heteroscedasticity issues. However, it is not severe, and there is no obvious shaping of the values present as the fitted values increase.
+# For residuals vs leverage, the Best123 model is highly concentrated early on with only a few points with larger leverage, and it creates a cone shape spreading quickly. This suggests heteroscedasticity might be an issue since the residuals are increasing as leverage increases. About half the points are also above Cook's distance, indicating the model may be sensitive to those observations. Best0 did have a cone shape, but the points were following Cook's distance with more values much closer to the line. We still have about half the points above and below the line halfway through, indicating that it didn't completely resolve the issue of some points having a bigger impact on the model, and the potential heteroscedasticity from the cone shape was still present.
+# The residuals vs index plots were also very similar with no significant differences. They both show many points concentrated between 0 and 2, and a few points almost at 3, with less than half the points below zero with a larger spread, down to 5. This indicates heteroscedasticity, and neither model performs better than the other in this area.
+# When conducting VIF analysis, all the variables had values less than 1.2, indicating multicollinearity is not a major issue for the models.
+library(car)
+best123_formula <- formula(Best123)
+best123_model <- lm(best123_formula, data = data)
+best0_formula <- formula(Best0)
+best0_model <- lm(best0_formula, data = data)
+par(mfrow =c(2,2))
+plot(best123_model)
+vif(best123_model)
+plot(best0_model)
+vif(best0_model)
+par(mfrow =c(1,2))
+plot(residuals(best123_model))
+plot(residuals(best0_model))
+```
+
+
+\medskip
+### (vi) Summarize your fndings.
+```{r}
+#The analysis began by importing and cleaning the Advertising.csv dataset, removing any unnecessary columns for further processing. The data was then split into training (80%) and testing (20%) sets, allowing for model development and evaluation. Three linear regression models were created using one, two, and three predictors, labeled Best1, Best2, and Best3, respectively. When evaluating the models using adjusted R² and training data, Best2, which included TV and radio as predictors, emerged as the best model, achieving the highest adjusted R² value. The testing data was then used to calculate the Root Mean Squared Error (RMSE) for each of the three models. In this case, Best3, which included TV, radio, and newspaper as predictors, was the best performer, totaling the lowest RMSE, making it the final model (Best123) selected for further analysis.
+
+#Residual analysis was then performed on both Best123 and Best0. The Residuals vs Fitted Plots for both models showed a lack of scatter, suggesting under-prediction in both cases, with the residuals either close to zero or negative. The Q-Q plots showed that the residuals closely followed a normal distribution, with minor deviations at the tails, which were not significant. In the Scale-Location Plots, both models exhibited some spread above the fitted line, indicating potential heteroscedasticity, though this issue was not severe. The Residuals vs Leverage Plots showed a more pronounced cone shape for Best123, indicating increasing variability in residuals as leverage increased, which could suggest heteroscedasticity. However, Best0 showed more stability, with residuals following Cook’s distance more closely. Additionally, Variance Inflation Factor (VIF) analysis was conducted on both models to check for multicollinearity. All variables in both Best123 and Best0 had VIF values well below 1.2, indicating that multicollinearity was not a significant issue for either model.
+
+#In summary, Model Best2 was identified as the best model based on adjusted R² (referenced as Best0), while Best3 outperformed the others in terms of RMSE (referenced as Best1230). Both models exhibited some evidence of heteroscedasticity and performed similarly for most of their residual behaviors, but neither model showed severe issues. Given the results, Best2 (Best0) would be the preferred model since it performed better during the residuals vs leverage analysis, had the better adjusted R^2, and performed almost identical to Best123 when comparing RMSE.
+```
+
+ 
+
+
+
